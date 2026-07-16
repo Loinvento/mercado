@@ -1,2 +1,2 @@
 # mercado
-app para hacer tus comras y llevar la cuenta de forma facil y sencilla
+app para hacer tus compras y llevar la cuenta de forma facil y sencilla
