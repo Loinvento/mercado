@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mercado-facil-v1';
+const CACHE_NAME = 'mercado-facil-v3';
 const APP_SHELL = [
   './index.html',
   './manifest.json',
