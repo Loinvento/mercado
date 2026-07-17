@@ -1,6 +1,6 @@
 {
-  "name": "Tu Mercado Fácil",
-  "short_name": "Mi Mercado",
+  "name": "TuMercado Fácil APP",
+  "short_name": "TuMercado Fácil",
   "description": "Escanea productos, controla tu presupuesto en $ y Bs, y no olvides nada del mercado.",
   "start_url": "./index.html",
   "display": "standalone",
