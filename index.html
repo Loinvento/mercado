@@ -248,16 +248,74 @@
 
         .product-title {
             font-weight: bold;
-            font-size: 1.15rem;
-            margin-bottom: 4px;
+            font-size: 1.05rem;
+            margin-bottom: 8px;
             text-align: center;
+            width: 100%;
+            padding: 9px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            outline: none;
+            background: white;
+        }
+
+        .product-title:focus {
+            border-color: var(--primary);
+        }
+
+        .product-barcode-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .product-barcode-row label {
+            font-size: 0.75rem;
+            color: #4b5563;
+            font-weight: 600;
+            white-space: nowrap;
         }
 
         .product-barcode {
-            font-size: 0.8rem;
-            color: var(--gray);
+            flex: 1;
+            font-size: 0.85rem;
+            color: var(--dark);
+            padding: 8px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            outline: none;
+        }
+
+        .product-barcode:focus {
+            border-color: var(--primary);
+        }
+
+        .product-category-row {
             margin-bottom: 15px;
+        }
+
+        .product-category-row label {
+            font-size: 0.75rem;
+            color: #4b5563;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 5px;
             text-align: center;
+        }
+
+        .product-category-row input {
+            width: 100%;
+            padding: 9px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            outline: none;
+            text-align: center;
+        }
+
+        .product-category-row input:focus {
+            border-color: var(--primary);
         }
 
         .toggle-type {
@@ -480,6 +538,120 @@
         .offline-badge.show {
             display: block;
         }
+
+        /* Finalizar compra */
+        .btn-finish {
+            background: var(--dark);
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 18px;
+        }
+
+        /* Gestión de la lista de rubros habituales */
+        .add-category-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .add-category-row input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .add-category-row button {
+            background: var(--primary-dark);
+            color: white;
+            border: none;
+            padding: 0 16px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .missing-remove {
+            background: none;
+            border: none;
+            color: var(--gray);
+            font-size: 1rem;
+            cursor: pointer;
+            margin-left: 8px;
+        }
+
+        /* Vista de Gastos / Historial */
+        .period-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--gray-light);
+        }
+
+        .period-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .period-label {
+            flex: 1;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .period-amount {
+            font-weight: bold;
+            color: var(--primary-dark);
+            font-size: 0.95rem;
+        }
+
+        .comparison-box {
+            margin-top: 18px;
+            padding: 16px;
+            border-radius: 12px;
+            background: #f3f4f6;
+            border: 1px solid var(--gray-light);
+            text-align: center;
+            font-size: 0.95rem;
+            font-weight: 600;
+            display: none;
+        }
+
+        .comparison-box.show {
+            display: block;
+        }
+
+        .comparison-box.up {
+            color: var(--accent-red);
+        }
+
+        .comparison-box.down {
+            color: var(--primary-dark);
+        }
+
+        .btn-close-purchase {
+            width: 100%;
+        }
+
+        .edit-box {
+            width: 100%;
+            max-width: 420px;
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
@@ -522,8 +694,20 @@
 
             <!-- Tarjeta de Entrada de Producto -->
             <div class="product-card" id="productCard">
-                <div class="product-title" id="cardName">Harina de Maíz P.A.N. 1kg</div>
-                <div class="product-barcode" id="cardBarcode">Código: 7591001000111</div>
+                <input type="text" class="product-title" id="cardName" value="Harina de Maíz P.A.N. 1kg"
+                       placeholder="Nombre del producto" oninput="calculateCardTotal()">
+
+                <div class="product-barcode-row">
+                    <label>Código:</label>
+                    <input type="text" class="product-barcode" id="cardBarcode"
+                           placeholder="Escribe el código de barra (opcional)">
+                </div>
+
+                <div class="product-category-row">
+                    <label>Rubro / Categoría</label>
+                    <input type="text" id="cardCategory" list="categoryOptions" placeholder="Ej: Harina, Verduras, Lácteos...">
+                    <datalist id="categoryOptions"></datalist>
+                </div>
 
                 <div class="toggle-type">
                     <button id="btnTypeUnit" class="active" onclick="setProductType('unit')">Por Unidad</button>
@@ -556,14 +740,36 @@
             <div id="cartList">
                 <div style="color: var(--gray); text-align: center; padding-top: 30px;">Tu carrito está vacío.</div>
             </div>
+            <button class="btn-finish btn-close-purchase" onclick="finishPurchase()">✅ FINALIZAR COMPRA</button>
         </div>
 
-        <!-- VISTA 3: Faltantes (Lista Inteligente) -->
+        <!-- VISTA 3: Faltantes (Lista Inteligente por rubro) -->
         <div id="view-missing" class="view">
-            <h3 style="margin-bottom: 15px; font-size: 1.2rem; border-bottom: 2px solid var(--gray-light); padding-bottom: 8px;">📋 Productos Faltantes</h3>
+            <h3 style="margin-bottom: 15px; font-size: 1.2rem; border-bottom: 2px solid var(--gray-light); padding-bottom: 8px;">📋 Faltantes por Rubro</h3>
+            <div class="add-category-row">
+                <input type="text" id="newCategoryInput" placeholder="Agregar rubro a mi lista (ej: Lácteos)">
+                <button onclick="addCategoryToList()">Agregar</button>
+            </div>
             <div id="missingList">
                 <!-- Se llenará dinámicamente -->
             </div>
+        </div>
+
+        <!-- VISTA 4: Gastos (Historial por quincena/mes) -->
+        <div id="view-gastos" class="view">
+            <h3 style="margin-bottom: 15px; font-size: 1.2rem; border-bottom: 2px solid var(--gray-light); padding-bottom: 8px;">💰 Gastos en Divisas</h3>
+            <div style="font-size: 0.8rem; color: var(--gray); margin-bottom: 10px;">Marca dos periodos para comparar cuánto gastaste de más o cuánto ahorraste.</div>
+            <div id="gastosList"></div>
+            <div class="comparison-box" id="comparisonBox"></div>
+        </div>
+
+        <!-- VISTA 5: Mis Productos Guardados -->
+        <div id="view-products" class="view">
+            <h3 style="margin-bottom: 15px; font-size: 1.2rem; border-bottom: 2px solid var(--gray-light); padding-bottom: 8px;">🗂️ Mis Productos Guardados</h3>
+            <div class="add-category-row">
+                <input type="text" id="productsSearchInput" placeholder="Buscar por nombre o rubro..." oninput="renderProductsList()">
+            </div>
+            <div id="productsList"></div>
         </div>
 
         <!-- Barra de Navegación Profesional -->
@@ -580,6 +786,14 @@
                 <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
                 Faltantes
             </button>
+            <button class="nav-btn" id="nav-gastos" onclick="switchView('gastos')">
+                <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+                Gastos
+            </button>
+            <button class="nav-btn" id="nav-products" onclick="switchView('products')">
+                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                Mis Prod.
+            </button>
         </nav>
     </div>
 
@@ -592,6 +806,41 @@
         <button class="scanner-close" onclick="closeScanner()">CANCELAR ESCANEO</button>
     </div>
 
+    <!-- Overlay para editar un producto guardado -->
+    <div class="scanner-overlay" id="editProductOverlay">
+        <div class="edit-box">
+            <h3 style="margin-bottom: 14px; text-align:center;">✏️ Editar producto</h3>
+
+            <div class="product-category-row">
+                <label>Nombre</label>
+                <input type="text" id="editName" placeholder="Nombre del producto">
+            </div>
+
+            <div class="product-category-row">
+                <label>Código de barra</label>
+                <input type="text" id="editBarcode" placeholder="(opcional)">
+            </div>
+
+            <div class="product-category-row">
+                <label>Rubro / Categoría</label>
+                <input type="text" id="editCategory" list="categoryOptions" placeholder="Ej: Harina, Verduras...">
+            </div>
+
+            <div class="toggle-type">
+                <button id="editBtnTypeUnit" class="active" onclick="setEditProductType('unit')">Por Unidad</button>
+                <button id="editBtnTypeWeight" onclick="setEditProductType('weight')">Al Peso (Kg)</button>
+            </div>
+
+            <div class="product-category-row">
+                <label id="editPriceLabel">Precio Unitario ($)</label>
+                <input type="number" id="editPrice" step="0.05" placeholder="0.00">
+            </div>
+
+            <button class="btn-add" onclick="saveProductEdit()">GUARDAR CAMBIOS</button>
+            <button class="btn-cancel-card" style="color:white;" onclick="closeEditProduct()">Cancelar</button>
+        </div>
+    </div>
+
     <div class="toast" id="toast"></div>
 
     <script>
@@ -599,25 +848,24 @@
         // BASE DE DATOS LOCAL (persistida en localStorage, funciona offline)
         // ==========================================================
         var DEFAULT_PRODUCTS = {
-            "7591001000111": { name: "Harina de Maíz P.A.N. 1kg", defaultPrice: 1.25, type: "unit" },
-            "7591002000222": { name: "Café Fama de América 250g", defaultPrice: 2.80, type: "unit" },
-            "7591003000333": { name: "Arroz Primor Grano Entero 1kg", defaultPrice: 1.15, type: "unit" }
+            "7591001000111": { name: "Harina de Maíz P.A.N. 1kg", defaultPrice: 1.25, type: "unit", category: "Harina" },
+            "7591002000222": { name: "Café Fama de América 250g", defaultPrice: 2.80, type: "unit", category: "Café" },
+            "7591003000333": { name: "Arroz Primor Grano Entero 1kg", defaultPrice: 1.15, type: "unit", category: "Arroz" }
         };
 
-        var DEFAULT_FREQUENT_LIST = [
-            "Harina de Maíz P.A.N. 1kg",
-            "Café Fama de América 250g",
-            "Arroz Primor Grano Entero 1kg"
-        ];
+        // Lista habitual: ahora por RUBRO/CATEGORÍA, no por marca específica
+        var DEFAULT_FREQUENT_LIST = ["Harina", "Café", "Arroz"];
 
         var DATABASE_PRODUCTS = loadFromStorage('db_products', DEFAULT_PRODUCTS);
         var FREQUENT_SHOPPING_LIST = loadFromStorage('frequent_list', DEFAULT_FREQUENT_LIST);
         var cart = loadFromStorage('cart', []);
+        var purchaseHistory = loadFromStorage('purchase_history', []);
 
         var selectedType = 'unit';
         var currentBarcode = "";
         var html5QrCode = null;
         var searchDebounce = null;
+        var selectedPeriods = [];
 
         function loadFromStorage(key, fallback) {
             try {
@@ -640,6 +888,21 @@
             saveToStorage('db_products', DATABASE_PRODUCTS);
             saveToStorage('frequent_list', FREQUENT_SHOPPING_LIST);
             saveToStorage('cart', cart);
+            saveToStorage('purchase_history', purchaseHistory);
+        }
+
+        function refreshCategoryOptions() {
+            var seen = {};
+            var options = [];
+            for (var code in DATABASE_PRODUCTS) {
+                var cat = DATABASE_PRODUCTS[code].category;
+                if (cat && !seen[cat]) { seen[cat] = true; options.push(cat); }
+            }
+            FREQUENT_SHOPPING_LIST.forEach(function(c) {
+                if (!seen[c]) { seen[c] = true; options.push(c); }
+            });
+            var datalist = document.getElementById('categoryOptions');
+            datalist.innerHTML = options.map(function(o) { return '<option value="' + o + '">'; }).join('');
         }
 
         // Restaurar config (tasa BCV / presupuesto) guardada
@@ -695,6 +958,8 @@
 
             if (viewName === 'cart') renderCart();
             if (viewName === 'missing') renderMissing();
+            if (viewName === 'gastos') renderGastos();
+            if (viewName === 'products') renderProductsList();
         }
 
         // ==========================================================
@@ -835,30 +1100,36 @@
         // ==========================================================
         function processScannedCode(barcode) {
             currentBarcode = barcode;
-            document.getElementById('cardBarcode').innerText = 'Código: ' + barcode;
+            refreshCategoryOptions();
+            document.getElementById('cardBarcode').value = barcode;
 
             if (DATABASE_PRODUCTS[barcode]) {
                 var prod = DATABASE_PRODUCTS[barcode];
-                document.getElementById('cardName').innerText = prod.name;
+                document.getElementById('cardName').value = prod.name;
                 document.getElementById('inputPrice').value = prod.defaultPrice;
+                document.getElementById('cardCategory').value = prod.category || '';
                 setProductType(prod.type);
                 showToast('✅ ' + prod.name);
             } else {
-                document.getElementById('cardName').innerText = "Nuevo Producto 📝";
+                document.getElementById('cardName').value = "";
                 document.getElementById('inputPrice').value = "1.00";
+                document.getElementById('cardCategory').value = '';
                 setProductType('unit');
-                showToast('Código nuevo, no está en tu base local todavía.');
+                showToast('Código nuevo. Escribe el nombre y el rubro para guardarlo.');
             }
 
             document.getElementById('productCard').style.display = 'block';
+            document.getElementById('cardName').focus();
             document.getElementById('productCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
         function openNewProductCard(name) {
-            currentBarcode = 'MANUAL-' + Date.now();
-            document.getElementById('cardBarcode').innerText = 'Producto agregado manualmente';
-            document.getElementById('cardName').innerText = name;
+            currentBarcode = "";
+            refreshCategoryOptions();
+            document.getElementById('cardBarcode').value = '';
+            document.getElementById('cardName').value = name;
             document.getElementById('inputPrice').value = "1.00";
+            document.getElementById('cardCategory').value = '';
             setProductType('unit');
             document.getElementById('productCard').style.display = 'block';
             document.getElementById('productCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -908,37 +1179,47 @@
         function addProductToCart() {
             var qty = parseFloat(document.getElementById('inputQty').value) || 0;
             var price = parseFloat(document.getElementById('inputPrice').value) || 0;
-            var name = document.getElementById('cardName').innerText;
+            var name = document.getElementById('cardName').value.trim();
+            var typedBarcode = document.getElementById('cardBarcode').value.trim();
+            var category = document.getElementById('cardCategory').value.trim();
 
-            if (name.indexOf("Nuevo Producto") !== -1) {
-                var customName = prompt("Introduce el nombre de este producto:");
-                name = customName ? customName : 'Prod. #' + currentBarcode.slice(-4);
+            if (!name) {
+                showToast('Escribe el nombre del producto antes de agregarlo.');
+                document.getElementById('cardName').focus();
+                return;
+            }
+            if (!category) {
+                showToast('Escribe el rubro/categoría (ej: Harina, Verduras) antes de agregarlo.');
+                document.getElementById('cardCategory').focus();
+                return;
             }
 
-            // Guardar/actualizar el producto en la base local para que la próxima vez
-            // se reconozca por autocompletado (y por código si vino de escaneo real)
-            if (currentBarcode && currentBarcode.indexOf('MANUAL-') !== 0) {
-                DATABASE_PRODUCTS[currentBarcode] = {
-                    name: name,
-                    defaultPrice: price,
-                    type: selectedType
-                };
-            }
+            // Clave para guardar en la base local: el código de barra escrito/escaneado,
+            // o una clave interna si el usuario no tiene o no escribió un código.
+            var storageKey = typedBarcode ? typedBarcode : (currentBarcode || ('MANUAL-' + Date.now()));
+
+            DATABASE_PRODUCTS[storageKey] = {
+                name: name,
+                defaultPrice: price,
+                type: selectedType,
+                category: category
+            };
 
             var item = {
                 name: name,
                 qty: qty,
                 price: price,
                 type: selectedType,
+                category: category,
                 totalUSD: qty * price
             };
 
             cart.push(item);
 
-            if (FREQUENT_SHOPPING_LIST.indexOf(name) === -1) {
+            if (FREQUENT_SHOPPING_LIST.indexOf(category) === -1) {
                 setTimeout(function() {
-                    if (confirm('¿"' + name + '" es un producto que compras recurrentemente?\n\n¿Quieres guardarlo en tu lista de "Faltantes"?')) {
-                        FREQUENT_SHOPPING_LIST.push(name);
+                    if (confirm('¿"' + category + '" es un rubro que compras recurrentemente?\n\n¿Quieres agregarlo a tu lista de "Faltantes"?')) {
+                        FREQUENT_SHOPPING_LIST.push(category);
                         persistAll();
                     }
                 }, 150);
@@ -997,6 +1278,7 @@
                                 '<strong>' + item.name + '</strong>' +
                                 '<div style="font-size: 0.8rem; color: var(--gray);">' +
                                     item.qty + ' ' + labelType + ' x $' + item.price.toFixed(2) +
+                                    (item.category ? ' · ' + item.category : '') +
                                 '</div>' +
                             '</div>' +
                             '<div style="text-align: right; font-weight: bold; display:flex; align-items:center; gap:10px;">' +
@@ -1018,36 +1300,321 @@
             renderCart();
         }
 
-        function renderMissing() {
-            var container = document.getElementById('missingList');
-            var boughtNames = [];
-            for (var i = 0; i < cart.length; i++) {
-                boughtNames.push(cart[i].name);
+        function finishPurchase() {
+            if (cart.length === 0) {
+                showToast('Tu carrito está vacío, no hay nada que finalizar.');
+                return;
+            }
+            var totalUSD = 0;
+            for (var i = 0; i < cart.length; i++) totalUSD += cart[i].totalUSD;
+
+            if (!confirm('¿Finalizar esta compra por $' + totalUSD.toFixed(2) + '?\n\nSe guardará en tu historial de Gastos y se vaciará el carrito.')) {
+                return;
             }
 
-            var missing = [];
-            for (var j = 0; j < FREQUENT_SHOPPING_LIST.length; j++) {
-                if (boughtNames.indexOf(FREQUENT_SHOPPING_LIST[j]) === -1) {
-                    missing.push(FREQUENT_SHOPPING_LIST[j]);
+            var today = new Date();
+            var dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+
+            purchaseHistory.push({ date: dateStr, totalUSD: totalUSD });
+            cart = [];
+            persistAll();
+            recalculateTotals();
+            renderCart();
+            showToast('✅ Compra guardada en tu historial de Gastos.');
+        }
+
+        // ==========================================================
+        // VISTA DE GASTOS: agrupación por quincena y comparación
+        // ==========================================================
+        var MESES_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+        function getPeriodInfo(dateStr) {
+            var parts = dateStr.split('-');
+            var year = parseInt(parts[0], 10);
+            var month = parseInt(parts[1], 10); // 1-12
+            var day = parseInt(parts[2], 10);
+            var half = day <= 15 ? 1 : 2;
+            var key = year + '-' + String(month).padStart(2, '0') + '-Q' + half;
+            var label = (half === 1 ? '1-15 ' : '16-fin ') + MESES_ES[month - 1] + ' ' + year;
+            return { key: key, label: label, year: year, month: month, half: half };
+        }
+
+        function groupHistoryByPeriod() {
+            var groups = {};
+            purchaseHistory.forEach(function(record) {
+                var info = getPeriodInfo(record.date);
+                if (!groups[info.key]) {
+                    groups[info.key] = { key: info.key, label: info.label, total: 0, year: info.year, month: info.month, half: info.half };
                 }
-            }
+                groups[info.key].total += record.totalUSD;
+            });
+            var list = [];
+            for (var k in groups) list.push(groups[k]);
+            list.sort(function(a, b) {
+                if (a.year !== b.year) return b.year - a.year;
+                if (a.month !== b.month) return b.month - a.month;
+                return b.half - a.half;
+            });
+            return list;
+        }
 
-            if (missing.length === 0) {
-                container.innerHTML = '<div style="color: var(--primary-dark); text-align: center; font-weight: bold; padding-top: 30px;">🎉 ¡Compraste todo lo de tu lista habitual!</div>';
+        function renderGastos() {
+            var container = document.getElementById('gastosList');
+            var periods = groupHistoryByPeriod();
+
+            if (periods.length === 0) {
+                container.innerHTML = '<div style="color: var(--gray); text-align: center; padding-top: 30px;">Todavía no has finalizado ninguna compra. Usa "FINALIZAR COMPRA" en tu carrito para empezar a registrar tus gastos.</div>';
+                document.getElementById('comparisonBox').classList.remove('show');
                 return;
             }
 
             var html = '';
-            for (var k = 0; k < missing.length; k++) {
-                html += '<div class="list-item" style="opacity: 0.8;">' +
+            periods.forEach(function(p) {
+                var checked = selectedPeriods.indexOf(p.key) !== -1;
+                html += '<div class="period-item">' +
+                            '<input type="checkbox" ' + (checked ? 'checked' : '') + ' onchange="togglePeriodSelection(\'' + p.key + '\')">' +
+                            '<span class="period-label">' + p.label + '</span>' +
+                            '<span class="period-amount">$' + p.total.toFixed(2) + '</span>' +
+                        '</div>';
+            });
+            container.innerHTML = html;
+            updateComparison(periods);
+        }
+
+        function togglePeriodSelection(key) {
+            var idx = selectedPeriods.indexOf(key);
+            if (idx !== -1) {
+                selectedPeriods.splice(idx, 1);
+            } else {
+                if (selectedPeriods.length >= 2) {
+                    selectedPeriods.shift(); // quita la selección más antigua
+                }
+                selectedPeriods.push(key);
+            }
+            renderGastos();
+        }
+
+        function updateComparison(periods) {
+            var box = document.getElementById('comparisonBox');
+            if (selectedPeriods.length !== 2) {
+                box.classList.remove('show');
+                return;
+            }
+
+            var p1 = periods.filter(function(p) { return p.key === selectedPeriods[0]; })[0];
+            var p2 = periods.filter(function(p) { return p.key === selectedPeriods[1]; })[0];
+            if (!p1 || !p2) {
+                box.classList.remove('show');
+                return;
+            }
+
+            // Orden cronológico: el más antiguo es la base de comparación
+            var base, actual;
+            if ((p1.year * 100 + p1.month * 10 + p1.half) <= (p2.year * 100 + p2.month * 10 + p2.half)) {
+                base = p1; actual = p2;
+            } else {
+                base = p2; actual = p1;
+            }
+
+            var diff = actual.total - base.total;
+            var pct = base.total > 0 ? (diff / base.total) * 100 : 0;
+
+            box.classList.remove('up', 'down');
+            if (diff > 0) {
+                box.classList.add('up');
+                box.innerHTML = 'En "' + actual.label + '" gastaste <strong>' + pct.toFixed(1) + '% más</strong> que en "' + base.label + '" ($' + base.total.toFixed(2) + ' → $' + actual.total.toFixed(2) + ')';
+            } else if (diff < 0) {
+                box.classList.add('down');
+                box.innerHTML = 'En "' + actual.label + '" ahorraste <strong>' + Math.abs(pct).toFixed(1) + '%</strong> respecto a "' + base.label + '" ($' + base.total.toFixed(2) + ' → $' + actual.total.toFixed(2) + ')';
+            } else {
+                box.innerHTML = 'Gastaste exactamente lo mismo en ambos periodos ($' + base.total.toFixed(2) + ')';
+            }
+            box.classList.add('show');
+        }
+
+        function addCategoryToList() {
+            var input = document.getElementById('newCategoryInput');
+            var cat = input.value.trim();
+            if (!cat) return;
+            if (FREQUENT_SHOPPING_LIST.indexOf(cat) === -1) {
+                FREQUENT_SHOPPING_LIST.push(cat);
+                persistAll();
+            }
+            input.value = '';
+            renderMissing();
+        }
+
+        function removeCategoryFromList(cat) {
+            var idx = FREQUENT_SHOPPING_LIST.indexOf(cat);
+            if (idx !== -1) {
+                FREQUENT_SHOPPING_LIST.splice(idx, 1);
+                persistAll();
+                renderMissing();
+            }
+        }
+
+        function renderMissing() {
+            var container = document.getElementById('missingList');
+            var boughtCategories = [];
+            for (var i = 0; i < cart.length; i++) {
+                if (cart[i].category && boughtCategories.indexOf(cart[i].category) === -1) {
+                    boughtCategories.push(cart[i].category);
+                }
+            }
+
+            if (FREQUENT_SHOPPING_LIST.length === 0) {
+                container.innerHTML = '<div style="color: var(--gray); text-align: center; padding-top: 30px;">Agrega rubros a tu lista de mercado arriba.</div>';
+                return;
+            }
+
+            var html = '';
+            for (var j = 0; j < FREQUENT_SHOPPING_LIST.length; j++) {
+                var cat = FREQUENT_SHOPPING_LIST[j];
+                var bought = boughtCategories.indexOf(cat) !== -1;
+                html += '<div class="list-item" style="opacity: ' + (bought ? '0.6' : '1') + ';">' +
                             '<div style="display: flex; align-items: center; gap: 10px;">' +
-                                '<input type="checkbox" disabled style="width: 18px; height: 18px;">' +
-                                '<span>' + missing[k] + '</span>' +
+                                '<input type="checkbox" disabled ' + (bought ? 'checked' : '') + ' style="width: 18px; height: 18px;">' +
+                                '<span>' + cat + '</span>' +
                             '</div>' +
-                            '<span style="color: var(--accent-yellow); font-size: 0.8rem; font-weight: bold;">FALTA</span>' +
+                            '<div style="display:flex; align-items:center;">' +
+                                '<span style="color: ' + (bought ? 'var(--primary-dark)' : 'var(--accent-yellow)') + '; font-size: 0.8rem; font-weight: bold;">' + (bought ? 'EN CARRITO' : 'FALTA') + '</span>' +
+                                '<button class="missing-remove" onclick="removeCategoryFromList(\'' + cat.replace(/'/g, "\\'") + '\')">✕</button>' +
+                            '</div>' +
                         '</div>';
             }
             container.innerHTML = html;
+        }
+
+        // ==========================================================
+        // MIS PRODUCTOS GUARDADOS (ver, editar, borrar)
+        // ==========================================================
+        var editingKey = null;
+        var editingType = 'unit';
+
+        function renderProductsList() {
+            var container = document.getElementById('productsList');
+            var query = (document.getElementById('productsSearchInput').value || '').trim().toLowerCase();
+
+            var entries = [];
+            for (var code in DATABASE_PRODUCTS) {
+                entries.push({ key: code, data: DATABASE_PRODUCTS[code] });
+            }
+
+            if (query) {
+                entries = entries.filter(function(e) {
+                    return e.data.name.toLowerCase().indexOf(query) !== -1 ||
+                           (e.data.category || '').toLowerCase().indexOf(query) !== -1;
+                });
+            }
+
+            entries.sort(function(a, b) { return a.data.name.localeCompare(b.data.name); });
+
+            if (entries.length === 0) {
+                container.innerHTML = '<div style="color: var(--gray); text-align: center; padding-top: 30px;">No hay productos guardados que coincidan.</div>';
+                return;
+            }
+
+            var html = '';
+            entries.forEach(function(e) {
+                var typeLabel = e.data.type === 'unit' ? 'Por unidad' : 'Al peso (kg)';
+                html += '<div class="list-item">' +
+                            '<div>' +
+                                '<strong>' + e.data.name + '</strong>' +
+                                '<div style="font-size: 0.78rem; color: var(--gray);">' +
+                                    (e.data.category || 'Sin rubro') + ' · $' + e.data.defaultPrice.toFixed(2) + ' · ' + typeLabel +
+                                '</div>' +
+                            '</div>' +
+                            '<div style="display:flex; gap:6px;">' +
+                                '<button onclick="openEditProduct(\'' + e.key.replace(/'/g, "\\'") + '\')" style="background:none;border:none;font-size:1.2rem;cursor:pointer;">✏️</button>' +
+                                '<button onclick="deleteProduct(\'' + e.key.replace(/'/g, "\\'") + '\')" style="background:none;border:none;color:var(--accent-red);font-size:1.2rem;cursor:pointer;">✕</button>' +
+                            '</div>' +
+                        '</div>';
+            });
+            container.innerHTML = html;
+        }
+
+        function openEditProduct(key) {
+            editingKey = key;
+            var prod = DATABASE_PRODUCTS[key];
+            if (!prod) return;
+
+            document.getElementById('editName').value = prod.name;
+            document.getElementById('editBarcode').value = key.indexOf('MANUAL-') === 0 ? '' : key;
+            document.getElementById('editCategory').value = prod.category || '';
+            document.getElementById('editPrice').value = prod.defaultPrice;
+            setEditProductType(prod.type || 'unit');
+
+            document.getElementById('editProductOverlay').classList.add('show');
+        }
+
+        function closeEditProduct() {
+            editingKey = null;
+            document.getElementById('editProductOverlay').classList.remove('show');
+        }
+
+        function setEditProductType(type) {
+            editingType = type;
+            var btnUnit = document.getElementById('editBtnTypeUnit');
+            var btnWeight = document.getElementById('editBtnTypeWeight');
+            var label = document.getElementById('editPriceLabel');
+
+            if (type === 'unit') {
+                btnUnit.classList.add('active');
+                btnWeight.classList.remove('active');
+                label.innerText = 'Precio Unitario ($)';
+            } else {
+                btnWeight.classList.add('active');
+                btnUnit.classList.remove('active');
+                label.innerText = 'Precio por Kilo ($)';
+            }
+        }
+
+        function saveProductEdit() {
+            if (!editingKey) return;
+
+            var name = document.getElementById('editName').value.trim();
+            var typedBarcode = document.getElementById('editBarcode').value.trim();
+            var category = document.getElementById('editCategory').value.trim();
+            var price = parseFloat(document.getElementById('editPrice').value) || 0;
+
+            if (!name) {
+                showToast('El nombre no puede quedar vacío.');
+                return;
+            }
+            if (!category) {
+                showToast('El rubro/categoría no puede quedar vacío.');
+                return;
+            }
+
+            var newKey = typedBarcode ? typedBarcode : editingKey;
+
+            var updatedData = {
+                name: name,
+                defaultPrice: price,
+                type: editingType,
+                category: category
+            };
+
+            if (newKey !== editingKey) {
+                delete DATABASE_PRODUCTS[editingKey];
+            }
+            DATABASE_PRODUCTS[newKey] = updatedData;
+
+            persistAll();
+            closeEditProduct();
+            renderProductsList();
+            showToast('✅ Producto actualizado.');
+        }
+
+        function deleteProduct(key) {
+            var prod = DATABASE_PRODUCTS[key];
+            if (!prod) return;
+            if (!confirm('¿Borrar "' + prod.name + '" de tu base de productos guardados?\n\nLa próxima vez que escanees este código, la app lo tratará como nuevo.')) {
+                return;
+            }
+            delete DATABASE_PRODUCTS[key];
+            persistAll();
+            renderProductsList();
         }
 
         // Cerrar el desplegable de autocompletado al tocar fuera de él
