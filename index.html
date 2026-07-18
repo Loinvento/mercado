@@ -9,6 +9,11 @@
     <link rel="apple-touch-icon" href="icon-192.png">
     <!-- Librería de escaneo de códigos de barra (se cachea offline vía Service Worker) -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <!-- Firebase (compat) para la Lista Mercado en tiempo real (Realtime Database).
+         Si borras o rompes estas llaves, la app simplemente sigue funcionando 100% local. -->
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
     <style>
         :root {
             --primary: #10b981;
@@ -588,6 +593,172 @@
             margin-left: 8px;
         }
 
+        /* Caja de conexión a la lista familiar */
+        .household-box {
+            background: #f3f4f6;
+            border: 1px solid var(--gray-light);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+
+        .household-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .household-row input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            outline: none;
+            text-transform: uppercase;
+        }
+
+        .household-row button {
+            background: var(--primary-dark);
+            color: white;
+            border: none;
+            padding: 0 14px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .household-status {
+            font-size: 0.78rem;
+            color: #4b5563;
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        .my-code-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed var(--gray-light);
+        }
+
+        .my-code-label {
+            font-size: 0.7rem;
+            color: var(--gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .my-code-value {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--dark);
+            letter-spacing: 0.5px;
+        }
+
+        .btn-share-code {
+            background: #25D366;
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.8rem;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        /* Fila de 3 campos: rubro / cantidad / unidad */
+        .add-category-row-3 {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .add-category-row-3 input[type="text"] {
+            flex: 2;
+        }
+
+        .add-category-row-3 input[type="number"] {
+            flex: 1;
+            min-width: 0;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            outline: none;
+            text-align: center;
+        }
+
+        .add-category-row-3 select {
+            padding: 10px 6px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            outline: none;
+            background: white;
+        }
+
+        .btn-add-category {
+            width: 100%;
+            background: var(--primary-dark);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+            margin-bottom: 4px;
+        }
+
+        /* Ítem de la lista familiar con progreso */
+        .shared-item {
+            padding: 12px 0;
+            border-bottom: 1px solid var(--gray-light);
+        }
+
+        .shared-item.done .shared-item-name {
+            color: var(--primary-dark);
+        }
+
+        .shared-item-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .shared-item-name {
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+
+        .shared-progress-bar {
+            background: var(--gray-light);
+            border-radius: 9999px;
+            height: 7px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .shared-progress-fill {
+            background: var(--primary);
+            height: 100%;
+            border-radius: 9999px;
+            transition: width 0.3s ease;
+        }
+
+        .shared-item-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+
         /* Vista de Gastos / Historial */
         .period-item {
             display: flex;
@@ -955,14 +1126,36 @@
             </div>
         </div>
 
-        <!-- VISTA 3: Faltantes (Lista Inteligente por rubro) -->
+        <!-- VISTA 3: Lista Mercado (compartida por rubro y cantidad) -->
         <div id="view-missing" class="view">
-            <h3 style="margin-bottom: 15px; font-size: 1.2rem; border-bottom: 2px solid var(--gray-light); padding-bottom: 8px;">📋 Faltantes por Rubro</h3>
-            <div class="add-category-row">
-                <input type="text" id="newCategoryInput" placeholder="Agregar rubro a mi lista (ej: Lácteos)">
-                <button onclick="addCategoryToList()">Agregar</button>
+            <h3 style="margin-bottom: 10px; font-size: 1.2rem; border-bottom: 2px solid var(--gray-light); padding-bottom: 8px;">📋 Lista Mercado</h3>
+
+            <div class="household-box">
+                <div class="my-code-row">
+                    <div>
+                        <div class="my-code-label">Tu código de mercado</div>
+                        <div class="my-code-value" id="myMarketCode">—</div>
+                    </div>
+                    <button class="btn-share-code" onclick="shareMarketCode()">📲 Compartir</button>
+                </div>
+                <div class="household-row">
+                    <input type="text" id="householdCodeInput" placeholder="¿Tienes otro código? Escríbelo aquí">
+                    <button onclick="joinMarket()">Unirme</button>
+                </div>
+                <div class="household-status" id="householdStatus">🔴 Sin conectar</div>
             </div>
-            <div id="missingList">
+
+            <div class="add-category-row add-category-row-3">
+                <input type="text" id="newCategoryInput" placeholder="Rubro (ej: Tomates)">
+                <input type="number" id="newCategoryQty" placeholder="Cant." step="0.25" min="0">
+                <select id="newCategoryUnit">
+                    <option value="unit">unid.</option>
+                    <option value="weight">kg</option>
+                </select>
+            </div>
+            <button class="btn-add-category" onclick="addCategoryToList()">➕ Agregar a la Lista Mercado</button>
+
+            <div id="missingList" style="margin-top: 16px;">
                 <!-- Se llenará dinámicamente -->
             </div>
         </div>
@@ -996,7 +1189,7 @@
             </button>
             <button class="nav-btn" id="nav-missing" onclick="switchView('missing')">
                 <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
-                Faltantes
+                Lista Merc.
             </button>
             <button class="nav-btn" id="nav-gastos" onclick="switchView('gastos')">
                 <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
@@ -1065,16 +1258,26 @@
             "7591003000333": { name: "Arroz Primor Grano Entero 1kg", defaultPrice: 1.15, type: "unit", category: "Arroz" }
         };
 
-        // Lista habitual: ahora por RUBRO/CATEGORÍA, no por marca específica
-        var DEFAULT_FREQUENT_LIST = ["Harina", "Café", "Arroz"];
+        // Lista familiar compartida: ahora por RUBRO + CANTIDAD (no por marca específica)
+        var DEFAULT_SHARED_LIST = [
+            { id: 'default_harina', category: 'Harina', targetQty: 1, unit: 'unit', boughtQty: 0 },
+            { id: 'default_cafe', category: 'Café', targetQty: 1, unit: 'unit', boughtQty: 0 },
+            { id: 'default_arroz', category: 'Arroz', targetQty: 1, unit: 'unit', boughtQty: 0 }
+        ];
 
         var DATABASE_PRODUCTS = loadFromStorage('db_products', DEFAULT_PRODUCTS);
-        var FREQUENT_SHOPPING_LIST = loadFromStorage('frequent_list', DEFAULT_FREQUENT_LIST);
+        var sharedList = loadFromStorage('shared_list', DEFAULT_SHARED_LIST);
         var cart = loadFromStorage('cart', []);
 
         // Historial de compras finalizadas: se guarda con su propia clave literal
         // 'market_history' (sin prefijo) tal como se pidió, para que sea fácil de ubicar.
         var marketHistory = loadMarketHistory();
+
+        // Lista Mercado en tiempo real (Firebase Realtime Database)
+        var marketCode = loadFromStorage('market_code', '');
+        var firebaseApp = null;
+        var db = null;
+        var marketRef = null;
 
         var selectedType = 'unit';
         var currentBarcode = "";
@@ -1101,7 +1304,6 @@
 
         function persistAll() {
             saveToStorage('db_products', DATABASE_PRODUCTS);
-            saveToStorage('frequent_list', FREQUENT_SHOPPING_LIST);
             saveToStorage('cart', cart);
         }
 
@@ -1129,11 +1331,231 @@
                 var cat = DATABASE_PRODUCTS[code].category;
                 if (cat && !seen[cat]) { seen[cat] = true; options.push(cat); }
             }
-            FREQUENT_SHOPPING_LIST.forEach(function(c) {
-                if (!seen[c]) { seen[c] = true; options.push(c); }
+            sharedList.forEach(function(it) {
+                if (!seen[it.category]) { seen[it.category] = true; options.push(it.category); }
             });
             var datalist = document.getElementById('categoryOptions');
             datalist.innerHTML = options.map(function(o) { return '<option value="' + o + '">'; }).join('');
+        }
+
+        // ==========================================================
+        // LISTA MERCADO EN TIEMPO REAL (Firebase Realtime Database)
+        // ==========================================================
+        var firebaseConfig = {
+            apiKey: "AIzaSyAXY8M3b8TyGDBWKGEvGhyAzFtatoW9-Z4",
+            authDomain: "tumercadofacil-45a75.firebaseapp.com",
+            databaseURL: "https://tumercadofacil-45a75-default-rtdb.firebaseio.com",
+            projectId: "tumercadofacil-45a75",
+            storageBucket: "tumercadofacil-45a75.appspot.com",
+            messagingSenderId: "60378566550",
+            appId: "1:60378566550:web:270fd9d39beba130f7937"
+        };
+
+        function generateMarketCode() {
+            // Sin 0/O/1/I para que no se confundan al leerlo o escribirlo a mano.
+            var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            var code = '';
+            for (var i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return 'TMF-' + code;
+        }
+
+        var authReady = false;
+        var pendingSubscribe = false;
+
+        function initFirebase() {
+            if (typeof firebase === 'undefined') return false;
+            if (!firebaseApp) {
+                try {
+                    firebaseApp = firebase.apps && firebase.apps.length
+                        ? firebase.app()
+                        : firebase.initializeApp(firebaseConfig);
+                    db = firebase.database();
+
+                    firebase.auth().onAuthStateChanged(function(user) {
+                        if (user) {
+                            authReady = true;
+                            if (pendingSubscribe) {
+                                pendingSubscribe = false;
+                                subscribeMarket();
+                            }
+                        }
+                    });
+                    firebase.auth().signInAnonymously().catch(function(err) {
+                        console.warn('No se pudo autenticar de forma anónima', err);
+                        updateMarketStatus(false);
+                    });
+                } catch (e) {
+                    console.warn('No se pudo inicializar Firebase', e);
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // Convierte el arreglo local a un objeto apto para Realtime Database
+        function listToRtdbObject(list) {
+            var obj = {};
+            list.forEach(function(it) {
+                obj[it.id] = {
+                    category: it.category,
+                    targetQty: it.targetQty,
+                    unit: it.unit,
+                    boughtQty: it.boughtQty
+                };
+            });
+            return obj;
+        }
+
+        function rtdbObjectToList(obj) {
+            if (!obj) return [];
+            return Object.keys(obj).map(function(key) {
+                var it = obj[key];
+                return { id: key, category: it.category, targetQty: it.targetQty, unit: it.unit, boughtQty: it.boughtQty };
+            });
+        }
+
+        function joinMarket() {
+            var input = document.getElementById('householdCodeInput');
+            var code = input.value.trim().toUpperCase();
+
+            if (!code) {
+                showToast('Escribe el código de mercado (ej: TMF-A3F9K2).');
+                return;
+            }
+            if (!initFirebase()) {
+                showToast('No se pudo conectar a Firebase. Revisa tu conexión.');
+                return;
+            }
+
+            marketCode = code;
+            saveToStorage('market_code', code);
+            document.getElementById('myMarketCode').innerText = code;
+            input.value = '';
+            subscribeMarket();
+            showToast('Uniéndote al mercado "' + code + '"...');
+        }
+
+        function subscribeMarket() {
+            if (!marketCode || !db) return;
+            if (!authReady) {
+                pendingSubscribe = true;
+                return;
+            }
+            if (marketRef) marketRef.off();
+
+            marketRef = db.ref('mercados/' + marketCode + '/lista');
+            marketRef.on('value', function(snapshot) {
+                updateMarketStatus(true);
+                var val = snapshot.val();
+                if (val) {
+                    sharedList = rtdbObjectToList(val);
+                    saveToStorage('shared_list', sharedList);
+                } else {
+                    // Código nuevo/vacío: lo llenamos con lo que ya tengas en este celular
+                    marketRef.set(listToRtdbObject(sharedList));
+                }
+                if (document.getElementById('view-missing').classList.contains('active')) {
+                    renderMissing();
+                }
+            }, function(err) {
+                console.warn('Error de sincronización de la Lista Mercado', err);
+                updateMarketStatus(false);
+            });
+        }
+
+        function pushSharedList() {
+            saveToStorage('shared_list', sharedList);
+            if (marketCode && db && marketRef) {
+                marketRef.set(listToRtdbObject(sharedList)).catch(function(err) {
+                    console.warn('No se pudo sincronizar ahora (¿sin internet?). Se guardó localmente y se reintentará al recuperar señal.', err);
+                });
+            }
+        }
+
+        function updateMarketStatus(connected) {
+            var el = document.getElementById('householdStatus');
+            if (!el) return;
+
+            if (marketCode && connected) {
+                el.innerText = '🟢 Sincronizando en tiempo real';
+            } else if (marketCode) {
+                el.innerText = '🟡 Sin internet ahora — se sincronizará al recuperar señal';
+            } else {
+                el.innerText = '🔴 Sin conectar';
+            }
+        }
+
+        function shareMarketCode() {
+            var text = '🛒 Únete a mi Lista Mercado en TuMercado Fácil APP.\n\nEntra a la pestaña "Lista Mercado" y escribe este código: ' + marketCode;
+            if (navigator.share) {
+                navigator.share({ title: 'Código de Lista Mercado', text: text }).catch(function() {});
+            } else {
+                var url = 'https://wa.me/?text=' + encodeURIComponent(text);
+                window.open(url, '_blank');
+            }
+        }
+
+        // Al recuperar conexión, reintenta subir lo que se haya cambiado localmente sin internet
+        window.addEventListener('online', function() {
+            if (marketCode) {
+                if (!initFirebase()) return;
+                if (!marketRef) subscribeMarket();
+                pushSharedList();
+            }
+        });
+
+        // Actualiza el avance comprado de un rubro cuando se agrega/quita del carrito
+        function updateSharedProgress(category, deltaQty) {
+            if (!category) return;
+            var match = sharedList.filter(function(it) {
+                return it.category.toLowerCase() === category.toLowerCase();
+            })[0];
+
+            if (match) {
+                match.boughtQty = Math.max(0, Math.round((match.boughtQty + deltaQty) * 1000) / 1000);
+                pushSharedList();
+                if (document.getElementById('view-missing').classList.contains('active')) renderMissing();
+            } else if (deltaQty > 0) {
+                setTimeout(function() {
+                    if (confirm('"' + category + '" no está en tu Lista Mercado.\n\n¿Agregarlo como comprado?')) {
+                        sharedList.push({ id: 'cat_' + Date.now(), category: category, targetQty: deltaQty, unit: 'unit', boughtQty: deltaQty });
+                        pushSharedList();
+                        if (document.getElementById('view-missing').classList.contains('active')) renderMissing();
+                    }
+                }, 150);
+            }
+        }
+
+        // Busca en la Lista Mercado un rubro activo (no completado) que coincida
+        // con el nombre o la categoría del producto escaneado/buscado.
+        function findListMatch(name, category) {
+            var lowerName = (name || '').toLowerCase();
+            var lowerCat = (category || '').toLowerCase();
+            return sharedList.filter(function(it) {
+                if (it.boughtQty >= it.targetQty) return false; // ya completo
+                var itCat = it.category.toLowerCase();
+                return itCat === lowerCat || (lowerName && lowerName.indexOf(itCat) !== -1);
+            })[0];
+        }
+
+        // Si el producto coincide con algo pendiente de la Lista Mercado,
+        // precarga la cantidad que falta y el rubro en la tarjeta.
+        function applyListMatchToCard(name, category) {
+            var match = findListMatch(name, category);
+            if (!match) return;
+
+            var remaining = Math.max(0, Math.round((match.targetQty - match.boughtQty) * 1000) / 1000);
+            if (remaining <= 0) return;
+
+            document.getElementById('inputQty').value = remaining;
+            document.getElementById('cardCategory').value = match.category;
+            setProductType(match.unit || 'unit');
+            calculateCardTotal();
+
+            var unitLabel = match.unit === 'weight' ? 'kg' : 'unid.';
+            showToast('📋 Coincide con tu Lista Mercado: ' + match.category + ' (faltan ' + remaining + ' ' + unitLabel + ')');
         }
 
         // Restaurar config (tasa BCV / presupuesto) guardada
@@ -1352,6 +1774,8 @@
             document.getElementById('productCard').style.display = 'block';
             document.getElementById('cardName').focus();
             document.getElementById('productCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            applyListMatchToCard(document.getElementById('cardName').value, document.getElementById('cardCategory').value);
         }
 
         function openNewProductCard(name) {
@@ -1364,6 +1788,8 @@
             setProductType('unit');
             document.getElementById('productCard').style.display = 'block';
             document.getElementById('productCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            applyListMatchToCard(name, '');
         }
 
         function closeProductCard() {
@@ -1446,15 +1872,7 @@
             };
 
             cart.push(item);
-
-            if (FREQUENT_SHOPPING_LIST.indexOf(category) === -1) {
-                setTimeout(function() {
-                    if (confirm('¿"' + category + '" es un rubro que compras recurrentemente?\n\n¿Quieres agregarlo a tu lista de "Faltantes"?')) {
-                        FREQUENT_SHOPPING_LIST.push(category);
-                        persistAll();
-                    }
-                }, 150);
-            }
+            updateSharedProgress(category, qty);
 
             persistAll();
             recalculateTotals();
@@ -1544,6 +1962,7 @@
 
             if (newQty <= 0) {
                 if (confirm('¿Estás seguro de que deseas eliminar ' + item.name + ' del carrito?')) {
+                    updateSharedProgress(item.category, -item.qty);
                     cart.splice(index, 1);
                     persistAll();
                     recalculateTotals();
@@ -1552,8 +1971,10 @@
                 return;
             }
 
+            var qtyDelta = newQty - item.qty;
             item.qty = newQty;
             item.totalUSD = item.qty * item.price;
+            updateSharedProgress(item.category, qtyDelta);
             persistAll();
             recalculateTotals();
             renderCart();
@@ -1585,6 +2006,7 @@
             if (!confirm('¿Estás seguro de que deseas eliminar ' + item.name + ' del carrito?')) {
                 return;
             }
+            updateSharedProgress(item.category, -item.qty);
             cart.splice(index, 1);
             persistAll();
             recalculateTotals();
@@ -1653,6 +2075,11 @@
 
             marketHistory.push({ date: dateStr, items: cart.length, totalUSD: totalUSD });
             saveMarketHistory();
+
+            // Reinicia el avance ("llevado") de la lista familiar para la próxima compra,
+            // pero conserva los rubros y cantidades objetivo tal cual los dejó la familia.
+            sharedList.forEach(function(it) { it.boughtQty = 0; });
+            pushSharedList();
 
             cart = [];
             persistAll();
@@ -1828,55 +2255,79 @@
         }
 
         function addCategoryToList() {
-            var input = document.getElementById('newCategoryInput');
-            var cat = input.value.trim();
-            if (!cat) return;
-            if (FREQUENT_SHOPPING_LIST.indexOf(cat) === -1) {
-                FREQUENT_SHOPPING_LIST.push(cat);
-                persistAll();
+            var catInput = document.getElementById('newCategoryInput');
+            var qtyInput = document.getElementById('newCategoryQty');
+            var unitSelect = document.getElementById('newCategoryUnit');
+
+            var cat = catInput.value.trim();
+            var qty = parseFloat(qtyInput.value) || 1;
+            var unit = unitSelect.value;
+
+            if (!cat) {
+                showToast('Escribe el rubro que necesitas (ej: Tomates).');
+                return;
             }
-            input.value = '';
+
+            var existing = sharedList.filter(function(it) {
+                return it.category.toLowerCase() === cat.toLowerCase();
+            })[0];
+
+            if (existing) {
+                existing.targetQty = qty;
+                existing.unit = unit;
+            } else {
+                sharedList.push({ id: 'cat_' + Date.now(), category: cat, targetQty: qty, unit: unit, boughtQty: 0 });
+            }
+
+            pushSharedList();
+            catInput.value = '';
+            qtyInput.value = '';
             renderMissing();
         }
 
-        function removeCategoryFromList(cat) {
-            var idx = FREQUENT_SHOPPING_LIST.indexOf(cat);
-            if (idx !== -1) {
-                FREQUENT_SHOPPING_LIST.splice(idx, 1);
-                persistAll();
-                renderMissing();
-            }
+        function removeCategoryFromList(id) {
+            sharedList = sharedList.filter(function(it) { return it.id !== id; });
+            pushSharedList();
+            renderMissing();
+        }
+
+        function changeSharedBought(id, delta) {
+            var item = sharedList.filter(function(it) { return it.id === id; })[0];
+            if (!item) return;
+            item.boughtQty = Math.max(0, Math.round((item.boughtQty + delta) * 1000) / 1000);
+            pushSharedList();
+            renderMissing();
         }
 
         function renderMissing() {
             var container = document.getElementById('missingList');
-            var boughtCategories = [];
-            for (var i = 0; i < cart.length; i++) {
-                if (cart[i].category && boughtCategories.indexOf(cart[i].category) === -1) {
-                    boughtCategories.push(cart[i].category);
-                }
-            }
+            updateMarketStatus(!!marketCode && !!db);
 
-            if (FREQUENT_SHOPPING_LIST.length === 0) {
-                container.innerHTML = '<div style="color: var(--gray); text-align: center; padding-top: 30px;">Agrega rubros a tu lista de mercado arriba.</div>';
+            if (sharedList.length === 0) {
+                container.innerHTML = '<div style="color: var(--gray); text-align: center; padding-top: 30px;">Agrega rubros a tu lista familiar arriba.</div>';
                 return;
             }
 
             var html = '';
-            for (var j = 0; j < FREQUENT_SHOPPING_LIST.length; j++) {
-                var cat = FREQUENT_SHOPPING_LIST[j];
-                var bought = boughtCategories.indexOf(cat) !== -1;
-                html += '<div class="list-item" style="opacity: ' + (bought ? '0.6' : '1') + ';">' +
-                            '<div style="display: flex; align-items: center; gap: 10px;">' +
-                                '<input type="checkbox" disabled ' + (bought ? 'checked' : '') + ' style="width: 18px; height: 18px;">' +
-                                '<span>' + cat + '</span>' +
+            sharedList.forEach(function(item) {
+                var unitLabel = item.unit === 'weight' ? 'kg' : 'unid.';
+                var step = item.unit === 'weight' ? 0.25 : 1;
+                var done = item.boughtQty >= item.targetQty && item.targetQty > 0;
+                var pct = item.targetQty > 0 ? Math.min(100, (item.boughtQty / item.targetQty) * 100) : 0;
+
+                html += '<div class="shared-item' + (done ? ' done' : '') + '">' +
+                            '<div class="shared-item-top">' +
+                                '<span class="shared-item-name">' + (done ? '✅ ' : '') + item.category + '</span>' +
+                                '<button class="missing-remove" onclick="removeCategoryFromList(\'' + item.id + '\')">✕</button>' +
                             '</div>' +
-                            '<div style="display:flex; align-items:center;">' +
-                                '<span style="color: ' + (bought ? 'var(--primary-dark)' : 'var(--accent-yellow)') + '; font-size: 0.8rem; font-weight: bold;">' + (bought ? 'EN CARRITO' : 'FALTA') + '</span>' +
-                                '<button class="missing-remove" onclick="removeCategoryFromList(\'' + cat.replace(/'/g, "\\'") + '\')">✕</button>' +
+                            '<div class="shared-progress-bar"><div class="shared-progress-fill" style="width:' + pct + '%;"></div></div>' +
+                            '<div class="shared-item-controls">' +
+                                '<button class="qty-btn" onclick="changeSharedBought(\'' + item.id + '\', -' + step + ')">-</button>' +
+                                '<span class="qty-value">' + item.boughtQty + ' / ' + item.targetQty + ' ' + unitLabel + '</span>' +
+                                '<button class="qty-btn" onclick="changeSharedBought(\'' + item.id + '\', ' + step + ')">+</button>' +
                             '</div>' +
                         '</div>';
-            }
+            });
             container.innerHTML = html;
         }
 
@@ -2031,6 +2482,20 @@
 
         // Pintar totales iniciales con lo que quedó guardado del carrito
         recalculateTotals();
+
+        // Si es la primera vez, generamos un código de mercado propio y nos
+        // conectamos solos. Si ya existía uno guardado, lo reutilizamos.
+        if (!marketCode) {
+            marketCode = generateMarketCode();
+            saveToStorage('market_code', marketCode);
+        }
+        document.getElementById('myMarketCode').innerText = marketCode;
+
+        if (initFirebase()) {
+            subscribeMarket();
+        } else {
+            updateMarketStatus(false);
+        }
     </script>
 </body>
 </html>
