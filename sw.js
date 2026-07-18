@@ -1,10 +1,13 @@
-const CACHE_NAME = 'mercado-facil-v6';
+const CACHE_NAME = 'mercado-facil-v9';
 const APP_SHELL = [
   './index.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
-  'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js'
+  'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
+  'https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js',
+  'https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js',
+  'https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js'
 ];
 
 // Al instalar, guarda en caché los archivos de la app y la librería de escaneo
