@@ -671,6 +671,33 @@
             flex-shrink: 0;
         }
 
+        /* Fila de 2 campos: rubro / categoría (departamento) */
+        .add-category-row-2 {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .add-category-row-2 input[type="text"] {
+            flex: 2;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .add-category-row-2 select {
+            flex: 1;
+            min-width: 0;
+            padding: 10px 4px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            outline: none;
+            background: white;
+        }
+
         /* Fila de 3 campos: rubro / cantidad / unidad */
         .add-category-row-3 {
             display: flex;
@@ -757,6 +784,39 @@
             align-items: center;
             gap: 8px;
             justify-content: center;
+        }
+
+        .shared-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Acordeón de categorías (departamentos) en la Lista Mercado */
+        .cat-accordion {
+            border: 1px solid var(--gray-light);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .cat-accordion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            background: #f3f4f6;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .cat-accordion-count {
+            font-size: 0.75rem;
+            color: var(--gray);
+            font-weight: 600;
+        }
+
+        .cat-accordion-body {
+            padding: 4px 14px 4px 14px;
         }
 
         /* Vista de Gastos / Historial */
@@ -1145,8 +1205,23 @@
                 <div class="household-status" id="householdStatus">🔴 Sin conectar</div>
             </div>
 
-            <div class="add-category-row add-category-row-3">
+            <div class="add-category-row-2">
                 <input type="text" id="newCategoryInput" placeholder="Rubro (ej: Tomates)">
+                <select id="newCategoriaSelect">
+                    <option value="Víveres">Víveres</option>
+                    <option value="Frutas">Frutas</option>
+                    <option value="Verduras">Verduras</option>
+                    <option value="Carnes">Carnes</option>
+                    <option value="Charcutería">Charcutería</option>
+                    <option value="Higiene Personal">Higiene Personal</option>
+                    <option value="Limpieza">Limpieza</option>
+                    <option value="Refrigerados">Refrigerados</option>
+                    <option value="Lácteos">Lácteos</option>
+                    <option value="Chucherías">Chucherías</option>
+                    <option value="Otros" selected>Otros</option>
+                </select>
+            </div>
+            <div class="add-category-row add-category-row-3">
                 <input type="number" id="newCategoryQty" placeholder="Cant." step="0.25" min="0">
                 <select id="newCategoryUnit">
                     <option value="unit">unid.</option>
@@ -1259,11 +1334,15 @@
         };
 
         // Lista familiar compartida: ahora por RUBRO + CANTIDAD (no por marca específica)
+        var CATEGORIA_OPTIONS = ['Víveres', 'Frutas', 'Verduras', 'Carnes', 'Charcutería', 'Higiene Personal', 'Limpieza', 'Refrigerados', 'Lácteos', 'Chucherías', 'Otros'];
+
         var DEFAULT_SHARED_LIST = [
-            { id: 'default_harina', category: 'Harina', targetQty: 1, unit: 'unit', boughtQty: 0 },
-            { id: 'default_cafe', category: 'Café', targetQty: 1, unit: 'unit', boughtQty: 0 },
-            { id: 'default_arroz', category: 'Arroz', targetQty: 1, unit: 'unit', boughtQty: 0 }
+            { id: 'default_harina', category: 'Harina', targetQty: 1, unit: 'unit', boughtQty: 0, categoria: 'Víveres' },
+            { id: 'default_cafe', category: 'Café', targetQty: 1, unit: 'unit', boughtQty: 0, categoria: 'Víveres' },
+            { id: 'default_arroz', category: 'Arroz', targetQty: 1, unit: 'unit', boughtQty: 0, categoria: 'Víveres' }
         ];
+
+        var categoriaCollapseState = {};
 
         var DATABASE_PRODUCTS = loadFromStorage('db_products', DEFAULT_PRODUCTS);
         var sharedList = loadFromStorage('shared_list', DEFAULT_SHARED_LIST);
@@ -1402,7 +1481,8 @@
                     category: it.category,
                     targetQty: it.targetQty,
                     unit: it.unit,
-                    boughtQty: it.boughtQty
+                    boughtQty: it.boughtQty,
+                    categoria: it.categoria || 'Otros'
                 };
             });
             return obj;
@@ -1412,7 +1492,7 @@
             if (!obj) return [];
             return Object.keys(obj).map(function(key) {
                 var it = obj[key];
-                return { id: key, category: it.category, targetQty: it.targetQty, unit: it.unit, boughtQty: it.boughtQty };
+                return { id: key, category: it.category, targetQty: it.targetQty, unit: it.unit, boughtQty: it.boughtQty, categoria: it.categoria || 'Otros' };
             });
         }
 
@@ -1520,7 +1600,7 @@
             } else if (deltaQty > 0) {
                 setTimeout(function() {
                     if (confirm('"' + category + '" no está en tu Lista Mercado.\n\n¿Agregarlo como comprado?')) {
-                        sharedList.push({ id: 'cat_' + Date.now(), category: category, targetQty: deltaQty, unit: 'unit', boughtQty: deltaQty });
+                        sharedList.push({ id: 'cat_' + Date.now(), category: category, targetQty: deltaQty, unit: 'unit', boughtQty: deltaQty, categoria: 'Otros' });
                         pushSharedList();
                         if (document.getElementById('view-missing').classList.contains('active')) renderMissing();
                     }
@@ -2258,10 +2338,12 @@
             var catInput = document.getElementById('newCategoryInput');
             var qtyInput = document.getElementById('newCategoryQty');
             var unitSelect = document.getElementById('newCategoryUnit');
+            var categoriaSelect = document.getElementById('newCategoriaSelect');
 
             var cat = catInput.value.trim();
             var qty = parseFloat(qtyInput.value) || 1;
             var unit = unitSelect.value;
+            var categoria = categoriaSelect.value || 'Otros';
 
             if (!cat) {
                 showToast('Escribe el rubro que necesitas (ej: Tomates).');
@@ -2275,9 +2357,13 @@
             if (existing) {
                 existing.targetQty = qty;
                 existing.unit = unit;
+                existing.categoria = categoria;
             } else {
-                sharedList.push({ id: 'cat_' + Date.now(), category: cat, targetQty: qty, unit: unit, boughtQty: 0 });
+                sharedList.push({ id: 'cat_' + Date.now(), category: cat, targetQty: qty, unit: unit, boughtQty: 0, categoria: categoria });
             }
+
+            // Si el rubro cae en una categoría nueva, la dejamos abierta para que se vea de una vez
+            categoriaCollapseState[categoria] = true;
 
             pushSharedList();
             catInput.value = '';
@@ -2299,6 +2385,31 @@
             renderMissing();
         }
 
+        function toggleCategoriaGroup(categoria) {
+            categoriaCollapseState[categoria] = !categoriaCollapseState[categoria];
+            renderMissing();
+        }
+
+        function renderSharedItem(item) {
+            var unitLabel = item.unit === 'weight' ? 'kg' : 'unid.';
+            var step = item.unit === 'weight' ? 0.25 : 1;
+            var done = item.boughtQty >= item.targetQty && item.targetQty > 0;
+            var pct = item.targetQty > 0 ? Math.min(100, (item.boughtQty / item.targetQty) * 100) : 0;
+
+            return '<div class="shared-item' + (done ? ' done' : '') + '">' +
+                        '<div class="shared-item-top">' +
+                            '<span class="shared-item-name">' + (done ? '✅ ' : '') + item.category + '</span>' +
+                            '<button class="missing-remove" onclick="removeCategoryFromList(\'' + item.id + '\')">✕</button>' +
+                        '</div>' +
+                        '<div class="shared-progress-bar"><div class="shared-progress-fill" style="width:' + pct + '%;"></div></div>' +
+                        '<div class="shared-item-controls">' +
+                            '<button class="qty-btn" onclick="changeSharedBought(\'' + item.id + '\', -' + step + ')">-</button>' +
+                            '<span class="qty-value">' + item.boughtQty + ' / ' + item.targetQty + ' ' + unitLabel + '</span>' +
+                            '<button class="qty-btn" onclick="changeSharedBought(\'' + item.id + '\', ' + step + ')">+</button>' +
+                        '</div>' +
+                    '</div>';
+        }
+
         function renderMissing() {
             var container = document.getElementById('missingList');
             updateMarketStatus(!!marketCode && !!db);
@@ -2308,26 +2419,44 @@
                 return;
             }
 
-            var html = '';
+            // Agrupar por categoría (departamento); los productos antiguos sin
+            // categoria caen automáticamente en "Otros" para no romper nada.
+            var groups = {};
+            var order = [];
             sharedList.forEach(function(item) {
-                var unitLabel = item.unit === 'weight' ? 'kg' : 'unid.';
-                var step = item.unit === 'weight' ? 0.25 : 1;
-                var done = item.boughtQty >= item.targetQty && item.targetQty > 0;
-                var pct = item.targetQty > 0 ? Math.min(100, (item.boughtQty / item.targetQty) * 100) : 0;
-
-                html += '<div class="shared-item' + (done ? ' done' : '') + '">' +
-                            '<div class="shared-item-top">' +
-                                '<span class="shared-item-name">' + (done ? '✅ ' : '') + item.category + '</span>' +
-                                '<button class="missing-remove" onclick="removeCategoryFromList(\'' + item.id + '\')">✕</button>' +
-                            '</div>' +
-                            '<div class="shared-progress-bar"><div class="shared-progress-fill" style="width:' + pct + '%;"></div></div>' +
-                            '<div class="shared-item-controls">' +
-                                '<button class="qty-btn" onclick="changeSharedBought(\'' + item.id + '\', -' + step + ')">-</button>' +
-                                '<span class="qty-value">' + item.boughtQty + ' / ' + item.targetQty + ' ' + unitLabel + '</span>' +
-                                '<button class="qty-btn" onclick="changeSharedBought(\'' + item.id + '\', ' + step + ')">+</button>' +
-                            '</div>' +
-                        '</div>';
+                var cat = item.categoria || 'Otros';
+                if (!groups[cat]) { groups[cat] = []; order.push(cat); }
+                groups[cat].push(item);
             });
+
+            // Orden consistente: primero las categorías conocidas en su orden habitual,
+            // cualquier categoría desconocida queda al final.
+            order.sort(function(a, b) {
+                var ia = CATEGORIA_OPTIONS.indexOf(a); if (ia === -1) ia = 999;
+                var ib = CATEGORIA_OPTIONS.indexOf(b); if (ib === -1) ib = 999;
+                return ia - ib;
+            });
+
+            var html = '';
+            order.forEach(function(cat) {
+                var items = groups[cat];
+                var isOpen = !!categoriaCollapseState[cat];
+                var doneCount = items.filter(function(it) { return it.boughtQty >= it.targetQty && it.targetQty > 0; }).length;
+
+                html += '<div class="cat-accordion">' +
+                            '<div class="cat-accordion-header" onclick="toggleCategoriaGroup(\'' + cat.replace(/'/g, "\\'") + '\')">' +
+                                '<span>' + (isOpen ? '▼' : '▶') + ' ' + cat + '</span>' +
+                                '<span class="cat-accordion-count">' + doneCount + '/' + items.length + '</span>' +
+                            '</div>' +
+                            '<div class="cat-accordion-body" style="display:' + (isOpen ? 'block' : 'none') + ';">';
+
+                items.forEach(function(item) {
+                    html += renderSharedItem(item);
+                });
+
+                html += '</div></div>';
+            });
+
             container.innerHTML = html;
         }
 
